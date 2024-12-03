@@ -86,6 +86,9 @@ namespace gazebo
       /// \brief Clock time when simulation was started.
       public: common::Time startTime;
 
+      /// \brief Initial simulation time.
+      public: common::Time initialSimTime;
+
       /// \brief True if simulation is paused.
       public: bool pause;
 
@@ -397,6 +400,13 @@ namespace gazebo
 
       /// \brief Shadow caster render back faces from scene SDF
       public: bool shadowCasterRenderBackFaces = true;
+
+      /// \brief This mutex is used to by the SetVisualShininess and
+      /// ShininessByScopedName methods to protect materialShininessMap.
+      public: std::mutex materialShininessMutex;
+
+      /// \brief Shininess values from scene SDF
+      public: std::map<std::string, double> materialShininessMap;
     };
   }
 }

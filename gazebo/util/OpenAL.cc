@@ -34,6 +34,10 @@
 #endif
 #endif
 
+#include <ignition/math/Matrix3.hh>
+#include <ignition/math/Pose3.hh>
+#include <ignition/math/Vector3.hh>
+
 #include "gazebo/common/CommonIface.hh"
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
@@ -181,6 +185,19 @@ std::set<std::string> OpenAL::DeviceList() const
     devices += str.size() + 1;
   }
   return deviceList;
+}
+
+//////////////////////////////////////////////////
+OpenAL* OpenAL::Instance()
+{
+#ifndef _WIN32
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+  return SingletonT<OpenAL>::Instance();
+#ifndef _WIN32
+  #pragma GCC diagnostic pop
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////

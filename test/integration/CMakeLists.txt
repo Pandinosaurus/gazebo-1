@@ -88,6 +88,7 @@ set(tests
   physics_thread_safe.cc
   physics_torsional_friction.cc
   pioneer2dx.cc
+  plowing_effect.cc
   plugin.cc
   plugin_interface.cc
   rayshape.cc
@@ -120,6 +121,7 @@ set(tests
   world_entity_below_point.cc
   world_playback.cc
   world_population.cc
+  world_with_initial_sim_time_from_cli.cc
   worlds_installed.cc
   )
 
@@ -205,6 +207,7 @@ set(dri_tests
   road.cc
   speed_pr2.cc
   visual.cc
+  visual_shininess.cc
   wideanglecamera_sensor.cc
   world_remove.cc
   world_reset.cc
@@ -232,6 +235,8 @@ set(qt_tests
 gz_build_qt_tests(${qt_tests})
 
 if (VALID_DRI_DISPLAY)
+  add_dependencies(${TEST_TYPE}_camera_sensor AmbientOcclusionVisualPlugin)
+  add_dependencies(${TEST_TYPE}_camera_sensor LensFlareSensorPlugin)
   add_dependencies(${TEST_TYPE}_heightmap HeightmapLODPlugin)
   # Increase timeout, to account for model download time.
   set_tests_properties(${TEST_TYPE}_factory PROPERTIES TIMEOUT 500)

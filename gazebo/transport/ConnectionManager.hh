@@ -27,8 +27,11 @@
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/common/SingletonT.hh"
 
-#include "gazebo/transport/Publisher.hh"
 #include "gazebo/transport/Connection.hh"
+#include "gazebo/transport/Publisher.hh"
+#if TBB_VERSION_MAJOR >= 2021
+#include "gazebo/transport/TaskGroup.hh"
+#endif
 #include "gazebo/util/system.hh"
 
 /// \brief Explicit instantiation for typed SingletonT.
@@ -164,6 +167,9 @@ namespace gazebo
       /// \brief Run the manager update loop once
       private: void RunUpdate();
 
+      /// \brief Returns a pointer to the unique (static) instance
+      public: static ConnectionManager* Instance();
+
       /// \brief Condition used to trigger an update.
       private: boost::condition_variable updateCondition;
 
@@ -193,6 +199,11 @@ namespace gazebo
 
       /// \brief Condition used for synchronization
       private: boost::condition_variable namespaceCondition;
+
+#if TBB_VERSION_MAJOR >= 2021
+      /// \brief For managing asynchronous tasks with tbb
+      private: TaskGroup taskGroup;
+#endif
 
       // Singleton implementation
       private: friend class SingletonT<ConnectionManager>;

@@ -1,5 +1,292 @@
 ## Gazebo 11
 
+## Gazebo 11.15.1 (2024-12-03)
+
+1. Revert "Remove GZ_SINGLETON_DECLARE definition workaround (fix for armhf)"
+    * [Issue #3411](https://github.com/gazebosim/gazebo-classic/issues/3411)
+    * [Pull request #3412](https://github.com/gazebosim/gazebo-classic/pull/3412)
+
+## Gazebo 11.15.0 (2024-11-26)
+
+1. Add Gazebo classic end-of-life notice
+   Can be disabled by setting GAZEBO_SUPPRESS_EOL_WARNING
+    * [Pull request #3405](https://github.com/gazebosim/gazebo/pull/3405)
+    * [Pull request #3406](https://github.com/gazebosim/gazebo-classic/pull/3406)
+
+1. Add EOL information to README
+    * [Pull request #3404](https://github.com/gazebosim/gazebo/pull/3404)
+
+1. Boost 1.86 compatibility
+    * [Pull request #3397](https://github.com/gazebosim/gazebo/pull/3397)
+
+1. Fix build with boost 1.85.0
+    * [Pull request #3386](https://github.com/gazebosim/gazebo/pull/3386)
+
+1. Change to windows-2022
+    * [Pull request #3383](https://github.com/gazebosim/gazebo/pull/3383)
+
+1. AudioDecoder: support ffmpeg 7.0
+    * [Pull request #3380](https://github.com/gazebosim/gazebo/pull/3380)
+
+1. gz world: use gz-transport to fix unclosed sockets
+    * [Pull request #3374](https://github.com/gazebosim/gazebo/pull/3374)
+
+1. Fix manpage installation when GZ_CLI_EXECUTABLE_NAME is used
+    * [Pull request #3370](https://github.com/gazebosim/gazebo/pull/3370)
+
+1. Fix build with graphviz 10.0
+    * [Pull request #3373](https://github.com/gazebosim/gazebo/pull/3373)
+
+1. Set gz tool name via GZ_CLI_EXECUTABLE_NAME
+    * [Pull request #3368](https://github.com/gazebosim/gazebo/pull/3368)
+
+1. vcpkg: update to the latest hash
+    * [Pull request #3367](https://github.com/gazebosim/gazebo/pull/3367)
+
+1. conda-forge CI: Pin libprotobuf to 4.24
+    * [Pull request #3365](https://github.com/gazebosim/gazebo/pull/3365)
+
+1. fix: Don't divide time by zero if single stepping.
+    * [Pull request #3352](https://github.com/gazebosim/gazebo/pull/3352)
+
+1. Port sensor update rate fix
+    * [Pull request #3353](https://github.com/gazebosim/gazebo/pull/3353)
+
+1. Add signal handlers for Windows
+    * [Pull request #3167](https://github.com/gazebosim/gazebo/pull/3167)
+
+1. Remove GZ_SINGLETON_DECLARE definition workaround (fix for armhf)
+    * [Pull request #3283](https://github.com/gazebosim/gazebo/pull/3283)
+
+## Gazebo 11.14.0 (2023-10-06)
+
+1. Visual::SetPose performance improvement / minor fixes
+    * [Pull request #3350](https://github.com/gazebosim/gazebo/pull/3350)
+   * A contribution from Janosch Machowinski
+
+1. Apply initial sim time also after a reset.
+    * [Pull request #3340](https://github.com/gazebosim/gazebo/pull/3340)
+   * A contribution from Martin Pecka
+
+1. Remove using namespace SimTK
+    * [Pull request #3347](https://github.com/gazebosim/gazebo/pull/3347)
+    * A contrubition from Silvio Traversaro
+
+1. Fix build with graphviz 9
+    * [Pull request #3345](https://github.com/gazebosim/gazebo/pull/3345)
+
+1. Add support for compiling on windows x64 and x86 with vcpkg-provided dependencies
+    * [Pull request #3320](https://github.com/gazebosim/gazebo/pull/3320)
+    * [Pull request #3349](https://github.com/gazebosim/gazebo/pull/3349)
+   * A contribution from talregev
+
+1. gzclient: improve startup reliability
+    * [Pull request #3338](https://github.com/gazebosim/gazebo/pull/3338)
+
+1. CI: add non concurrency to all GitHub workflows
+    * [Pull request #3337](https://github.com/gazebosim/gazebo/pull/3337)
+   * A contribution from talregev
+
+1. Set `HOME_ENV` according the OS
+    * [Pull request #3334](https://github.com/gazebosim/gazebo/pull/3334)
+   * A contribution from talregev
+
+1. Allow usage of lambdas as transport subscription callbacks
+    * [Pull request #3309](https://github.com/gazebosim/gazebo/pull/3309)
+   * A contribution from Patrick Roncagliolo
+
+1. Fix for finding new versions of protobuf
+    * [Pull request #3331](https://github.com/gazebosim/gazebo/pull/3331)
+
+## Gazebo 11.13.0 (2023-05-17)
+
+1. Fix wide-angle lens flare occlusion lag
+   * [Pull request #3325](https://github.com/gazebosim/gazebo-classic/pull/3325)
+
+1. Add missing spaces to several rendering messages 
+   * [Pull request #3322](https://github.com/gazebosim/gazebo-classic/pull/3322)
+
+1. Fix build with ffmpeg 6.0
+   * [Pull request #3318](https://github.com/gazebosim/gazebo-classic/pull/3318)
+
+1. Allow user to name a specific light that will generate lens flare
+   * [Pull request #3305](https://github.com/gazebosim/gazebo-classic/pull/3305)
+   * A contribution from Terry Welsh 
+
+1. JointController: improve thread safety
+   * [Pull request #3303](https://github.com/gazebosim/gazebo-classic/pull/3303)
+
+1. Fix pkg-config-related CMake warning
+   * [Pull request #3301](https://github.com/gazebosim/gazebo-classic/pull/3301)
+
+1. Fix template specialization in constructors to fix GCC11 build
+   * [Pull request #3295](https://github.com/gazebosim/gazebo-classic/pull/3295)
+   * A contribution from Ondřej Svoboda
+
+1. Set initial sim time from the command-line
+   * [Pull request #3294](https://github.com/gazebosim/gazebo-classic/pull/3294)
+
+1. Fix typo in README
+   * [Pull request #3291](https://github.com/gazebosim/gazebo-classic/pull/3291)
+
+1. msgs.cc: add missing <array> include
+   * [Pull request #3290](https://github.com/gazebosim/gazebo-classic/pull/3290)
+
+1.  Fix crash with DEM and Camera
+   * [Pull request #3279](https://github.com/gazebosim/gazebo-classic/pull/3279)
+
+1.  Fix focal builds: use python3 with check_test_ran.py
+   * [Pull request #3278](https://github.com/gazebosim/gazebo-classic/pull/3278)
+
+1. Fix for wide angle lens flare occlusion bug
+   * [Pull request #3276](https://github.com/gazebosim/gazebo-classic/pull/3276)
+   * With the contribution of Terry Welsh 
+
+1. Fix for opende heightfield and console spam
+   * [Pull request #3271](https://github.com/gazebosim/gazebo-classic/pull/3271)
+
+1. Fixes in conda-forge CI
+   * [Pull request #3270](https://github.com/gazebosim/gazebo-classic/pull/3270)
+   * [Pull request #3287](https://github.com/gazebosim/gazebo-classic/pull/3287)
+   * [Pull request #3315](https://github.com/gazebosim/gazebo-classic/pull/3315)
+
+1. Fix Instance() method of Singleton classes
+   * [Pull request #3269](https://github.com/gazebosim/gazebo-classic/pull/3269)
+
+1. Fix disappearing shadows when looking from certain angles
+   * [Pull request #3267](https://github.com/gazebosim/gazebo-classic/pull/3267)
+
+1. Support Lunar DEMs
+   * [Pull request #3257](https://github.com/gazebosim/gazebo-classic/pull/3257)
+   * [Pull request #3250](https://github.com/gazebosim/gazebo-classic/pull/3250)
+   * [Pull request #3252](https://github.com/gazebosim/gazebo-classic/pull/3252)
+   * [Pull request #3258](https://github.com/gazebosim/gazebo-classic/pull/3258)
+
+1. Add support for cross-compilation in Gazebo
+   * [Pull request #3190](https://github.com/gazebosim/gazebo-classic/pull/3190)  
+
+## Gazebo 11.12.0 (2022-09-14)
+
+1. BulletLink: add and set force and torque
+    * [Pull request #3255](https://github.com/osrf/gazebo/pull/3255)
+
+1. Camera: expose intrinsics parameters
+    * [Pull request #3245](https://github.com/osrf/gazebo/pull/3245)
+
+1. Add missing header includes
+    * [Pull request #3227](https://github.com/osrf/gazebo/pull/3227)
+
+1. Permit users to override `USE_EXTERNAL_TINYXML2` and `USE_EXTERNAL_TINYXML`
+    * [Pull request #3254](https://github.com/osrf/gazebo/pull/3254)
+
+1. CustomPSSMShadowCamera: support custom projection matrix
+    * [Pull request #3249](https://github.com/osrf/gazebo/pull/3249)
+
+1. Update Readme and add gazebo logo
+    * [Pull request #3233](https://github.com/osrf/gazebo/pull/3233)
+    * [Pull request #3226](https://github.com/osrf/gazebo/pull/3226)
+
+1. Wheel plowing approximation in ODEPhysics
+    * [Pull request #3164](https://github.com/osrf/gazebo/pull/3164)
+
+1. LensFlare: parameterize number of occlusion steps
+    * [Pull request #3234](https://github.com/osrf/gazebo/pull/3234)
+    * [Pull request #3241](https://github.com/osrf/gazebo/pull/3241)
+
+1. Support shininess value for each Visual in a Model
+    * [Pull request #3235](https://github.com/osrf/gazebo/pull/3235)
+
+1. Fix shininess and add tests
+    * [Pull request #3231](https://github.com/osrf/gazebo/pull/3231)
+
+## Gazebo 11.11.0 (2022-05-25)
+
+1. Convert `OGRE_RESOURCE_PATH` with `TO_CMAKE_PATH`
+    * [Pull request #3165](https://github.com/osrf/gazebo/pull/3165)
+    * A contrubition from Silvio Traversaro
+
+1. Fix compatibility with FFmpeg 5.0
+    * [Pull request #3195](https://github.com/osrf/gazebo/pull/3195)
+    * A contrubition from Silvio Traversaro
+
+1. Get/Set friction coefficients of wheels
+    * [Pull request #3219](https://github.com/osrf/gazebo/pull/3219)
+
+1. Support `<anti_aliasing>` element when setting up camera
+    * [Pull request #3201](https://github.com/osrf/gazebo/pull/3201)
+
+1. Added shininess to models
+    * [Pull request #3213](https://github.com/osrf/gazebo/pull/3213)
+    * [Pull request #3223](https://github.com/osrf/gazebo/pull/3223)
+
+1. Fix missing namespace for string
+    * [Pull request #3211](https://github.com/osrf/gazebo/pull/3211)
+
+1. Fix typo in TBB target check in `gazebo-config.cmake.in`
+    * [Pull request #3207](https://github.com/osrf/gazebo/pull/3207)
+
+1. Separate cache files for each heightmap LOD
+    * [Pull request #3200](https://github.com/osrf/gazebo/pull/3200)
+
+1. Parse `ode_quiet` physics parameter from SDFormat
+    * [Pull request #3194](https://github.com/osrf/gazebo/pull/3194)
+
+## Gazebo 11.10.2 (2022-03-19)
+
+1. Support plotting for entities with / in the name
+    * [Pull request #3187](https://github.com/osrf/gazebo/pull/3187)
+
+1. Replace deprecated tbb task for tbb >= 2021
+    * [Pull request #3174](https://github.com/osrf/gazebo/pull/3174)
+    * A contrubition from Alex Dewar and Silvio Traversaro
+    * [Pull request #3157](https://github.com/osrf/gazebo/pull/3157)
+
+1. Add CI for compiling gazebo with conda-forge dependencies
+    * [Pull request #3186](https://github.com/osrf/gazebo/pull/3186)
+    * A contrubition from Silvio Traversaro
+
+1. SearchForStuff: Do not pass /usr/lib to PATH in qwt's find_library
+    * [Pull request #3178](https://github.com/osrf/gazebo/pull/3178)
+    * A contrubition from Silvio Traversaro
+
+1. Scene: support deletion of Heightmap Visuals
+    * [Pull request #3171](https://github.com/osrf/gazebo/pull/3171)
+
+1. ODEJoint: don't SetStiffnessDamping for gearbox
+    * [Pull request #3169](https://github.com/osrf/gazebo/pull/3169)
+
+## Gazebo 11.10.1 (2022-01-19)
+
+1. Revert boost/bind.hpp changes in header files
+    * [Pull request #3160](https://github.com/osrf/gazebo/pull/3160)
+
+1. Fix duplicate vertex program name Ogre crash
+    * [Pull request #3161](https://github.com/osrf/gazebo/pull/3161)
+
+## Gazebo 11.10.0 (2022-01-12)
+
+1. Use boost/bind/bind.hpp to fix warnings on Arch Linux
+    * [Pull request #3156](https://github.com/osrf/gazebo/pull/3156)
+    * Inspired by a contribution from Alex Dewar <alex.dewar@gmx.co.uk>
+
+1. Load model plugins even after sensor timeout
+    * [Pull request #3154](https://github.com/osrf/gazebo/pull/3154)
+
+1. CMake exports: remove -std=c++11 flag
+    * [Pull request #3050](https://github.com/osrf/gazebo/pull/3050)
+    * A contribution from Guilhem Saurel <guilhem.saurel@laas.fr>
+
+1. Create github action ci
+    * [Pull request #3049](https://github.com/osrf/gazebo/pull/3049)
+    * A contribution from Tal Regev <tal.regev@gmail.com>
+
+1. Fix Windows build when using vcpkg
+    * [Pull request #3132](https://github.com/osrf/gazebo/pull/3132)
+    * A contribution from Akash Munagala <akash.munagala@gmail.com>
+
+1. Point light shadows
+    * [Pull request #3051](https://github.com/osrf/gazebo/pull/3051)
+
 ## Gazebo 11.9.1 (2021-12-02)
 
 1. setup.sh: fix relocatability of `LD_LIBRARY_PATH`
@@ -4992,3 +5279,4 @@ compilation on Windows.
 *  Numerous bug fixes
 *  APT repository hosted at [http://osrfoundation.org OSRF]
 *  Improved process control prevents zombie processes
+

@@ -22,6 +22,7 @@
 
 #include <ignition/math/Color.hh>
 #include <ignition/math/Matrix4.hh>
+#include <ignition/transport/Node.hh>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -395,8 +396,43 @@ void Heightmap::Load()
   // try loading heightmap data locally
   if (!this->dataPtr->filename.empty())
   {
+    // Get spherical coordinates surface name from physics::World
+    std::string surfaceType = "EARTH_WGS84";
+    {
+      ignition::transport::Node node;
+      ignition::msgs::StringMsg rep;
+      const std::string serviceName = "/spherical_coordinates_surface_type";
+      bool result;
+      unsigned int timeout = 5000;
+      bool executed = node.Request(serviceName,
+          timeout, rep, result);
+      if (executed)
+      {
+        if (result)
+          surfaceType = rep.data();
+        else
+          gzerr << "Service call[" << serviceName << "] failed" << std::endl;
+      }
+      else
+      {
+        gzerr << "Service call[" << serviceName << "] timed out" << std::endl;
+      }
+    }
+
+    common::SphericalCoordinatesPtr sphericalCoordinates;
+    if (surfaceType == "MOON_SCS")
+    {
+       sphericalCoordinates = boost::make_shared<common::SphericalCoordinates>(
+                  common::SphericalCoordinates::MOON_SCS);
+    }
+    else
+    {
+       sphericalCoordinates = boost::make_shared<common::SphericalCoordinates>(
+                  common::SphericalCoordinates::EARTH_WGS84);
+    }
+
     this->dataPtr->heightmapData = common::HeightmapDataLoader::LoadTerrainFile(
-        this->dataPtr->filename);
+        this->dataPtr->filename, sphericalCoordinates);
 
     if (this->dataPtr->heightmapData)
     {
@@ -518,12 +554,20 @@ void Heightmap::Load()
     }
   }
 
+  std::string terrainNameSuffix = "";
+  if (this->LOD() == 0)
+  {
+    terrainNameSuffix = "_LOD0";
+  }
+
   // If the paging is enabled we modify the number of subterrains
   if (this->dataPtr->useTerrainPaging)
   {
     this->dataPtr->splitTerrain = true;
     nTerrains = this->dataPtr->numTerrainSubdivisions;
-    prefix = terrainDirPath / "gazebo_terrain_cache";
+    std::string terrainName = "gazebo_terrain_cache" +
+        terrainNameSuffix;
+    prefix = terrainDirPath / terrainName.c_str();
   }
   else
   {
@@ -542,7 +586,8 @@ void Heightmap::Load()
       gzmsg << "Large heightmap used with LOD. It will be subdivided into " <<
           this->dataPtr->numTerrainSubdivisions << " terrains." << std::endl;
     }
-    prefix = terrainDirPath / "gazebo_terrain";
+    std::string terrainName = "gazebo_terrain" + terrainNameSuffix;
+    prefix = terrainDirPath / terrainName.c_str();
   }
 
   double sqrtN = sqrt(nTerrains);

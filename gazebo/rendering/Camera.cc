@@ -22,7 +22,13 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <ignition/common/Profiler.hh>
+#include <ignition/math/Angle.hh>
 #include <ignition/math/Helpers.hh>
+#include <ignition/math/Matrix4.hh>
+#include <ignition/math/Pose3.hh>
+#include <ignition/math/Quaternion.hh>
+#include <ignition/math/Vector2.hh>
+#include <ignition/math/Vector3.hh>
 #include <sdf/sdf.hh>
 
 #ifndef _WIN32
@@ -38,6 +44,7 @@
 #include "gazebo/common/Console.hh"
 #include "gazebo/common/Exception.hh"
 #include "gazebo/common/VideoEncoder.hh"
+#include "gazebo/common/CommonIface.hh"
 
 #include "gazebo/rendering/ogre_gazebo.h"
 #include "gazebo/rendering/RTShaderSystem.hh"
@@ -95,7 +102,7 @@ Camera::Camera(const std::string &_name, ScenePtr _scene,
 
   this->sceneNode = NULL;
 
-  this->screenshotPath = getenv("HOME");
+  this->screenshotPath = getenv(HOMEDIR);
   this->screenshotPath += "/.gazebo/pictures";
 
   // Connect to the render signal
@@ -118,6 +125,10 @@ Camera::Camera(const std::string &_name, ScenePtr _scene,
 
   this->dataPtr->node = transport::NodePtr(new transport::Node());
   this->dataPtr->node->Init();
+
+  this->dataPtr->antiAliasingValue = 4;
+
+  this->dataPtr->cameraIntrinsicMatrix = ignition::math::Matrix3d::Identity;
 }
 
 //////////////////////////////////////////////////
@@ -143,6 +154,8 @@ void Camera::Load()
     this->imageHeight = imgElem->Get<int>("height");
     this->imageFormat = this->OgrePixelFormat(
         imgElem->Get<std::string>("format"));
+
+    this->dataPtr->antiAliasingValue = imgElem->Get<int>("anti_aliasing");
   }
   else
     gzthrow("Camera has no <image> tag.");
@@ -230,6 +243,9 @@ void Camera::UpdateCameraIntrinsics(
     _cameraIntrinsicsFx, _cameraIntrinsicsFy,
     _cameraIntrinsicsCx, _cameraIntrinsicsCy,
     _cameraIntrinsicsS, clipNear, clipFar);
+  this->dataPtr->cameraIntrinsicMatrix = this->BuildIntrinsicMatrix(
+             _cameraIntrinsicsFx, _cameraIntrinsicsFy,
+             _cameraIntrinsicsCx, _cameraIntrinsicsCy);
 
   if (this->camera != nullptr)
   {
@@ -322,6 +338,24 @@ ignition::math::Matrix4d Camera::BuildProjectionMatrix(
            _intrinsicsFx, _intrinsicsFy,
            _intrinsicsCx, _imageHeight - _intrinsicsCy,
            _intrinsicsS, _clipNear, _clipFar);
+}
+
+//////////////////////////////////////////////////
+ignition::math::Matrix3d Camera::BuildIntrinsicMatrix(
+    const double _intrinsicsFx, const double _intrinsicsFy,
+    const double _intrinsicsCx, double _intrinsicsCy)
+{
+  return ignition::math::Matrix3d(
+          _intrinsicsFx,
+          0,
+          _intrinsicsCx,
+          0,
+          _intrinsicsFy,
+          _intrinsicsCy,
+          0,
+          0,
+          1
+  );
 }
 
 //////////////////////////////////////////////////
@@ -809,11 +843,8 @@ void Camera::SetClipDist()
 
   if (this->camera)
   {
-    if (!this->cameraUsingIntrinsics)
-    {
-      this->camera->setNearClipDistance(clipElem->Get<double>("near"));
-      this->camera->setFarClipDistance(clipElem->Get<double>("far"));
-    }
+    this->camera->setNearClipDistance(clipElem->Get<double>("near"));
+    this->camera->setFarClipDistance(clipElem->Get<double>("far"));
     this->camera->setRenderingDistance(clipElem->Get<double>("far"));
   }
   else
@@ -1088,6 +1119,30 @@ double Camera::FarClip() const
     return this->camera->getFarClipDistance();
   else
     return 0;
+}
+
+//////////////////////////////////////////////////
+double Camera::ImageFocalLengthX() const
+{
+  return this->dataPtr->cameraIntrinsicMatrix(0, 0);
+}
+
+//////////////////////////////////////////////////
+double Camera::ImageFocalLengthY() const
+{
+  return this->dataPtr->cameraIntrinsicMatrix(1, 1);
+}
+
+//////////////////////////////////////////////////
+double Camera::ImageOpticalCenterX() const
+{
+  return this->dataPtr->cameraIntrinsicMatrix(0, 2);
+}
+
+//////////////////////////////////////////////////
+double Camera::ImageOpticalCenterY() const
+{
+  return this->dataPtr->cameraIntrinsicMatrix(1, 2);
 }
 
 //////////////////////////////////////////////////
@@ -1480,7 +1535,7 @@ void Camera::CreateRenderTexture(const std::string &_textureName)
       RenderEngine::Instance()->FSAALevels();
 
   // check if target fsaa is supported
-  unsigned int targetFSAA = 4;
+  unsigned int targetFSAA = this->dataPtr->antiAliasingValue;
   auto const it = std::find(fsaaLevels.begin(), fsaaLevels.end(), targetFSAA);
   if (it != fsaaLevels.end())
     fsaa = targetFSAA;
@@ -2033,6 +2088,7 @@ void Camera::UpdateFOV()
     {
       this->camera->setAspectRatio(ratio);
       this->camera->setFOVy(Ogre::Radian(this->LimitFOV(vfov)));
+      this->CalculateIntrinsicsFromProjectionMatrix();
     }
   }
 }
@@ -2129,6 +2185,23 @@ bool Camera::SetBackgroundColor(const ignition::math::Color &_color)
 ignition::math::Matrix4d Camera::ProjectionMatrix() const
 {
   return Conversions::ConvertIgn(this->camera->getProjectionMatrix());
+}
+
+///////////////////////////////////////////////
+void Camera::CalculateIntrinsicsFromProjectionMatrix()
+{
+  const ignition::math::Matrix4d& projectionMat = this->ProjectionMatrix();
+
+  const double width = this->imageWidth;
+  const double height = this->imageHeight;
+
+  double fX = (projectionMat(0, 0) * width) / 2;
+  double fY = (projectionMat(1, 1) * height) / 2;
+  double cX = -(width * (projectionMat(0, 2) - 1.0)) / 2;
+  double cY = height + (height * (projectionMat(1, 2) - 1.0)) / 2;
+
+  this->dataPtr->cameraIntrinsicMatrix = this->BuildIntrinsicMatrix(
+      fX, fY, cX, cY);
 }
 
 //////////////////////////////////////////////////

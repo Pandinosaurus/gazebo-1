@@ -25,7 +25,7 @@
 #include <iostream>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/function.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
@@ -40,6 +40,7 @@
 #include "gazebo/common/ModelDatabasePrivate.hh"
 #include "gazebo/common/ModelDatabase.hh"
 #include "gazebo/common/SemanticVersion.hh"
+#include "gazebo/common/CommonIface.hh"
 
 using namespace gazebo;
 using namespace common;
@@ -503,7 +504,7 @@ std::string ModelDatabase::GetModelPath(const std::string &_uri,
         continue;
       }
 
-      std::string outputPath = getenv("HOME");
+      std::string outputPath = getenv(HOMEDIR);
       outputPath += "/.gazebo/models";
 
 #ifndef _WIN32
@@ -682,4 +683,17 @@ std::string ModelDatabase::GetModelFile(const std::string &_uri)
   }
 
   return result;
+}
+
+//////////////////////////////////////////////////
+ModelDatabase* ModelDatabase::Instance()
+{
+#ifndef _WIN32
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+  return SingletonT<ModelDatabase>::Instance();
+#ifndef _WIN32
+  #pragma GCC diagnostic pop
+#endif
 }

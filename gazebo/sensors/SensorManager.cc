@@ -16,7 +16,7 @@
 */
 
 #include <functional>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #include "gazebo/physics/Link.hh"
 #include "gazebo/physics/Model.hh"
@@ -207,7 +207,7 @@ void PublishPerformanceMetrics()
   if (ignition::math::equal(diffSimTime.Double(), 0.0))
     return;
 
-  if (realTime == 0)
+  if (diffRealtime == common::Time::Zero)
     realTimeFactor = 0;
   else
     realTimeFactor = diffSimTime / diffRealtime;
@@ -761,7 +761,7 @@ void SensorManager::SensorContainer::RunLoop()
       if (!g_sensorsDirty)
         return;
 
-      // Get the minimum update rate from the sensors.
+      // Get the maximum update rate from the sensors.
       for (Sensor_V::iterator iter = this->sensors.begin();
           iter != this->sensors.end() && !this->stop; ++iter)
       {
@@ -1005,9 +1005,24 @@ bool SensorManager::ImageSensorContainer::WaitForPrerendered(double _timeoutsec)
   return (ret == std::cv_status::no_timeout);
 }
 
+//////////////////////////////////////////////////
+SensorManager* SensorManager::Instance()
+{
+#ifndef _WIN32
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+  return SingletonT<SensorManager>::Instance();
+#ifndef _WIN32
+  #pragma GCC diagnostic pop
+#endif
+}
+
+
 /////////////////////////////////////////////////
 SimTimeEventHandler::SimTimeEventHandler()
 {
+  using namespace boost::placeholders;
   this->updateConnection = event::Events::ConnectWorldUpdateBegin(
       boost::bind(&SimTimeEventHandler::OnUpdate, this, _1));
 }

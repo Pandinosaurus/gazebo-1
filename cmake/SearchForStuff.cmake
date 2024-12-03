@@ -2,7 +2,7 @@ include (${gazebo_cmake_dir}/GazeboUtils.cmake)
 include (CheckCXXSourceCompiles)
 
 include (${gazebo_cmake_dir}/FindOS.cmake)
-include (FindPkgConfig)
+find_package(PkgConfig)
 include (${gazebo_cmake_dir}/FindFreeimage.cmake)
 
 execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --modversion protobuf
@@ -31,23 +31,43 @@ endif()
 
 ########################################
 # The Google Protobuf library for message generation + serialization
-find_package(Protobuf REQUIRED)
-if (NOT PROTOBUF_FOUND)
-  BUILD_ERROR ("Missing: Google Protobuf (libprotobuf-dev)")
-endif()
-if (NOT PROTOBUF_PROTOC_EXECUTABLE)
-  BUILD_ERROR ("Missing: Google Protobuf Compiler (protobuf-compiler)")
-endif()
-if (NOT PROTOBUF_PROTOC_LIBRARY)
-  BUILD_ERROR ("Missing: Google Protobuf Compiler Library (libprotoc-dev)")
-endif()
 
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-  set (GZ_PROTOBUF_LIBRARY ${PROTOBUF_LIBRARY_DEBUG})
-  set (GZ_PROTOBUF_PROTOC_LIBRARY ${PROTOBUF_PROTOC_LIBRARY_DEBUG})
+# Protobuf >= 22 requires to link abseil, so we are constrained to use
+# find_package(Protobuf) and link to protobuf::libprotobuf,
+# see https://github.com/conda-forge/conda-forge-pinning-feedstock/issues/4075#issuecomment-1569242816
+if (DEFINED PROTOBUF_VERSION AND PROTOBUF_VERSION GREATER_EQUAL 22.0)
+  set(GZ_PROTOBUF_USE_CMAKE_CONFIG_DEFAULT ON)
 else()
-  set (GZ_PROTOBUF_LIBRARY ${PROTOBUF_LIBRARY})
-  set (GZ_PROTOBUF_PROTOC_LIBRARY ${PROTOBUF_PROTOC_LIBRARY})
+  set(GZ_PROTOBUF_USE_CMAKE_CONFIG_DEFAULT OFF)
+endif()
+option(GZ_PROTOBUF_USE_CMAKE_CONFIG "If true use protobuf-config.cmake to find protobuf" ${GZ_PROTOBUF_USE_CMAKE_CONFIG_DEFAULT})
+mark_as_advanced(GZ_PROTOBUF_USE_CMAKE_CONFIG)
+
+if(NOT GZ_PROTOBUF_USE_CMAKE_CONFIG)
+  find_package(Protobuf REQUIRED)
+  if (NOT PROTOBUF_FOUND)
+    BUILD_ERROR ("Missing: Google Protobuf (libprotobuf-dev)")
+  endif()
+  if (NOT PROTOBUF_PROTOC_EXECUTABLE)
+    BUILD_ERROR ("Missing: Google Protobuf Compiler (protobuf-compiler)")
+  endif()
+  if (NOT PROTOBUF_PROTOC_LIBRARY)
+    BUILD_ERROR ("Missing: Google Protobuf Compiler Library (libprotoc-dev)")
+  endif()
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    set (GZ_PROTOBUF_LIBRARY ${PROTOBUF_LIBRARY_DEBUG})
+    set (GZ_PROTOBUF_PROTOC_LIBRARY ${PROTOBUF_PROTOC_LIBRARY_DEBUG})
+  else()
+    set (GZ_PROTOBUF_LIBRARY ${PROTOBUF_LIBRARY})
+    set (GZ_PROTOBUF_PROTOC_LIBRARY ${PROTOBUF_PROTOC_LIBRARY})
+  endif()
+else()
+  find_package(Protobuf CONFIG REQUIRED)
+  set (GZ_PROTOBUF_LIBRARY protobuf::libprotobuf)
+  set (GZ_PROTOBUF_PROTOC_LIBRARY protobuf::libprotoc)
+  if(NOT DEFINED PROTOBUF_PROTOC_EXECUTABLE)
+    get_target_property(PROTOBUF_PROTOC_EXECUTABLE protobuf::protoc LOCATION)
+  endif()
 endif()
 
 ########################################
@@ -147,6 +167,10 @@ if (PKG_CONFIG_FOUND)
   find_package(Simbody)
   if (Simbody_FOUND)
     message (STATUS "Looking for Simbody - found")
+    # When simbody is found but it static libs, we need to add it manually.
+    if ("${Simbody_LIBRARIES}" STREQUAL "" OR "${Simbody_LIBRARIES}" STREQUAL "Simbody_LIBRARIES-NOTFOUND")
+      set(Simbody_LIBRARIES ${Simbody_STATIC_LIBRARIES})
+    endif()
     set (HAVE_SIMBODY TRUE)
   else()
     message (STATUS "Looking for Simbody - not found")
@@ -180,18 +204,19 @@ if (PKG_CONFIG_FOUND)
 
   # Use system installation on UNIX and Apple, and internal copy on Windows
   if (UNIX OR APPLE)
-    message (STATUS "Using system tinyxml.")
-    set (USE_EXTERNAL_TINYXML True)
+    set (USE_EXTERNAL_TINYXML_DEFAULT_VALUE ON)
   elseif(WIN32)
-    message (STATUS "Using internal tinyxml.")
-    set (USE_EXTERNAL_TINYXML False)
-    add_definitions(-DTIXML_USE_STL)
+    set (USE_EXTERNAL_TINYXML_DEFAULT_VALUE OFF)
   else()
     message (STATUS "Unknown platform, unable to configure tinyxml.")
     BUILD_ERROR("Unknown platform")
   endif()
-
+  
+  option(USE_EXTERNAL_TINYXML "Use an externally provided tinyxml library" ${USE_EXTERNAL_TINYXML_DEFAULT_VALUE})
+  mark_as_advanced(USE_EXTERNAL_TINYXML)
+  
   if (USE_EXTERNAL_TINYXML)
+    message (STATUS "Using system tinyxml.")
     pkg_check_modules(tinyxml tinyxml)
     if (NOT tinyxml_FOUND)
         find_path (tinyxml_INCLUDE_DIRS tinyxml.h ${tinyxml_INCLUDE_DIRS} ENV CPATH)
@@ -212,6 +237,8 @@ if (PKG_CONFIG_FOUND)
       BUILD_ERROR("Missing: tinyxml")
     endif()
   else()
+    message (STATUS "Using internal tinyxml.")
+    add_definitions(-DTIXML_USE_STL)
     # Needed in WIN32 since in UNIX the flag is added in the code installed
     message (STATUS "Skipping search for tinyxml")
     set (tinyxml_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/deps/win/tinyxml")
@@ -226,17 +253,19 @@ if (PKG_CONFIG_FOUND)
 
   # Use system installation on UNIX and Apple, and internal copy on Windows
   if (UNIX OR APPLE)
-    message (STATUS "Using system tinyxml2.")
-    set (USE_EXTERNAL_TINYXML2 True)
+    set (USE_EXTERNAL_TINYXML2_DEFAULT_VALUE ON)
   elseif(WIN32)
-    message (STATUS "Using internal tinyxml2.")
-    set (USE_EXTERNAL_TINYXML2 False)
+    set (USE_EXTERNAL_TINYXML2_DEFAULT_VALUE OFF)
   else()
     message (STATUS "Unknown platform, unable to configure tinyxml2.")
     BUILD_ERROR("Unknown platform")
   endif()
+  
+  option(USE_EXTERNAL_TINYXML2 "Use an externally provided tinyxml2 library" ${USE_EXTERNAL_TINYXML2_DEFAULT_VALUE})
+  mark_as_advanced(USE_EXTERNAL_TINYXML2)
 
   if (USE_EXTERNAL_TINYXML2)
+    message (STATUS "Using system tinyxml2.")
     pkg_check_modules(tinyxml2 tinyxml2)
     if (NOT tinyxml2_FOUND)
         find_path (tinyxml2_INCLUDE_DIRS tinyxml2.h ${tinyxml2_INCLUDE_DIRS} ENV CPATH)
@@ -264,6 +293,7 @@ if (PKG_CONFIG_FOUND)
       link_directories(${tinyxml2_LIBRARY_DIRS})
     endif()
   else()
+    message (STATUS "Using internal tinyxml2.")
     # Needed in WIN32 since in UNIX the flag is added in the code installed
     message (STATUS "Skipping search for tinyxml2")
     set (tinyxml2_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/deps/tinyxml2")
@@ -301,7 +331,7 @@ if (PKG_CONFIG_FOUND)
 
   #################################################
   # Find TBB
-  pkg_check_modules(TBB tbb<2021)
+  pkg_check_modules(TBB tbb)
   set (TBB_PKG_CONFIG "tbb")
   if (NOT TBB_FOUND)
     message(STATUS "TBB not found, attempting to detect manually")
@@ -325,6 +355,12 @@ if (PKG_CONFIG_FOUND)
       endif(tbb_library)
     endif (NOT TBB_FOUND)
   endif (NOT TBB_FOUND)
+  set(HAVE_TBB_GREATER_OR_EQUAL_2021 OFF)
+  if (DEFINED TBB_VERSION AND NOT ${TBB_VERSION} STREQUAL "")
+    if (${TBB_VERSION} VERSION_GREATER_EQUAL "2021.0")
+      set(HAVE_TBB_GREATER_OR_EQUAL_2021 ON)
+    endif()
+  endif()
 
   #################################################
   # Find OGRE
@@ -555,9 +591,15 @@ if (PKG_CONFIG_FOUND)
   if (NOT BULLET_FOUND)
      pkg_check_modules(BULLET bullet2.82>=2.82)
   endif()
-
+  if (NOT BULLET_FOUND)
+    find_package(BULLET CONFIG 2.82)
+  endif()
   if (BULLET_FOUND)
     set (HAVE_BULLET TRUE)
+    if (${BULLET_VERSION} STREQUAL "")
+      set (BULLET_VERSION ${BULLET_VERSION_STRING})
+    endif()
+    message (STATUS "Bullet found: " ${BULLET_VERSION})
     add_definitions( -DLIBBULLET_VERSION=${BULLET_VERSION} )
   else()
     set (HAVE_BULLET FALSE)
@@ -602,7 +644,7 @@ endif ()
 
 ########################################
 # Find SDFormat
-set(SDF_MIN_REQUIRED_VERSION 9.3)
+set(SDF_MIN_REQUIRED_VERSION 9.8)
 find_package(sdformat9 ${SDF_MIN_REQUIRED_VERSION} REQUIRED)
 if (sdformat9_FOUND)
   message (STATUS "Looking for SDFormat9  - found")
@@ -676,6 +718,20 @@ else()
 endif()
 
 ########################################
+# Find python3, which is used by tools/check_test_ran.py
+if (${CMAKE_VERSION} VERSION_LESS 3.12)
+  find_package(PythonInterp 3)
+else()
+  find_package(Python3 COMPONENTS Interpreter)
+  if (Python3_FOUND)
+    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+  endif()
+endif()
+if (NOT EXISTS ${PYTHON_EXECUTABLE})
+  BUILD_WARNING("python3 not found. The check_test_ran.py script will cause tests to fail.")
+endif()
+
+########################################
 # Find xsltproc, which is used by tools/check_test_ran.py
 find_program(XSLTPROC xsltproc)
 if (NOT EXISTS ${XSLTPROC})
@@ -725,6 +781,9 @@ if (NOT GRAPHVIZ_FOUND)
 else ()
   message (STATUS "Looking for libgraphviz-dev - found")
   set (HAVE_GRAPHVIZ ON CACHE BOOL "HAVE GRAPHVIZ" FORCE)
+  if (${GRAPHVIZ_CGRAPH_PKG_VERSION} VERSION_LESS 9.0)
+    set(GRAPHVIZ_VERSION_LT_9 TRUE)
+  endif ()
 endif ()
 
 ########################################
@@ -831,7 +890,6 @@ find_path(QWT_INCLUDE_DIR NAMES qwt.h PATHS
 )
 
 find_library(QWT_LIBRARY NAMES qwt-qt5 qwt PATHS
-  /usr/lib
   /usr/local/lib
   /usr/local/lib/qwt.framework
   ${QWT_WIN_LIBRARY_DIR}

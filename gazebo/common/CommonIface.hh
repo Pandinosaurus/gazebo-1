@@ -85,6 +85,12 @@ namespace gazebo
     GZ_COMMON_VISIBLE
     const char *getEnv(const char *_name);
 
+#ifdef _WIN32
+    #define HOMEDIR "USERPROFILE"
+#else
+    #define HOMEDIR "HOME"
+#endif  // _WIN32
+
     /// \brief Get the current working directory
     /// \return Name of the current directory
     GZ_COMMON_VISIBLE
@@ -223,7 +229,7 @@ namespace gazebo
   std::string common::get_sha1(const T &_buffer)
   {
     boost::uuids::detail::sha1 sha1;
-    unsigned int hash[5];
+    boost::uuids::detail::sha1::digest_type hash;
     std::stringstream stream;
 
     if (_buffer.size() == 0)

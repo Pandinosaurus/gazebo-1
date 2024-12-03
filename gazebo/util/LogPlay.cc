@@ -414,8 +414,8 @@ common::Time LogPlay::LogEndTime() const
 /////////////////////////////////////////////////
 std::string LogPlay::Filename() const
 {
-  return boost::filesystem::basename(this->dataPtr->filename) +
-    boost::filesystem::extension(this->dataPtr->filename);
+  boost::filesystem::path path(this->dataPtr->filename);
+  return path.stem().string() + path.extension().string();
 }
 
 /////////////////////////////////////////////////
@@ -837,4 +837,17 @@ bool LogPlay::PrevChunk()
   this->dataPtr->end = this->dataPtr->currentChunk.size() - 1;
 
   return true;
+}
+
+//////////////////////////////////////////////////
+LogPlay* LogPlay::Instance()
+{
+#ifndef _WIN32
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+  return SingletonT<LogPlay>::Instance();
+#ifndef _WIN32
+  #pragma GCC diagnostic pop
+#endif
 }

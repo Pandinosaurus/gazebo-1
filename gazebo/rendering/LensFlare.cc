@@ -55,6 +55,10 @@ namespace gazebo
       /// \brief Color of lens flare.
       public: ignition::math::Vector3d color
           = ignition::math::Vector3d(1.0, 1.0, 1.0);
+
+      /// \brief Number of steps to take in each direction when checking for
+      /// occlusion.
+      public: double occlusionSteps = 10.0;
     };
 
     //////////////////////////////////////////////////
@@ -93,6 +97,20 @@ namespace gazebo
         const ignition::math::Vector3d &_color)
     {
       this->dataPtr->color = _color;
+    }
+
+    //////////////////////////////////////////////////
+    void LensFlareCompositorListener::SetOcclusionSteps(
+        double _occlusionSteps)
+    {
+      if (_occlusionSteps < 1)
+      {
+        gzerr << "Invalid OcclusionSteps parameter [" << _occlusionSteps
+              << "], must be >= 1"
+              << std::endl;
+        return;
+      }
+      this->dataPtr->occlusionSteps = _occlusionSteps;
     }
 
     //////////////////////////////////////////////////
@@ -196,6 +214,7 @@ namespace gazebo
       // a gazebo camera object
       std::vector<Ogre::Camera *> ogreEnvCameras =
           _wideAngleCam->OgreEnvCameras();
+
       if (!this->dataPtr->wideAngleDummyCamera)
       {
         // create camera with auto render set to false
@@ -250,9 +269,6 @@ namespace gazebo
       lightPos.z = (imagePos.Z() > 1.75) ? -1 : 1;
 
       // check occlusion and set scale
-      // loop through all env cameras and find the cam that sees the light
-      // ray cast using that env camera to see if the distance to closest
-      // intersection point is less than light's world pos
       double occlusionScale = 1.0;
       if (lightPos.z >= 0.0)
       {
@@ -266,14 +282,37 @@ namespace gazebo
           pos.x /= pos.w;
           pos.y /= pos.w;
           // check if light is visible
-          if (std::fabs(pos.x) <= 1 && std::fabs(pos.y) <= 1 && pos.z > 0)
+          if (std::fabs(pos.x) <= 1 &&
+              std::fabs(pos.y) <= 1 && pos.z > -abs(pos.w))
           {
+            // The ogreEnvCamera and wideAngleDummyCamera used here both
+            // transform from gazebo z-up coords to Ogre y-up coords. If the
+            // ogreEnvCamera's orientation is injected into wideAngleDummyCamera
+            // as-is, the up direction transform is performed twice and this
+            // algorithm fails. Here we reverse the up direction transform on
+            // the ogreEnvCamera so that OcclusionScale() only sees one of them.
+            Ogre::Quaternion quat = cam->getDerivedOrientation();
+            Ogre::Vector3 axis = quat * Ogre::Vector3::UNIT_Z;
+            Ogre::Quaternion rotquat;
+            rotquat.FromAngleAxis(Ogre::Degree(90.0), axis);
+            quat = rotquat * quat;
+            axis = quat * Ogre::Vector3::UNIT_Y;
+            rotquat.FromAngleAxis(Ogre::Degree(90.0), axis);
+            quat = rotquat * quat;
+
             // check occlusion using this env camera
             this->dataPtr->wideAngleDummyCamera->SetWorldPose(
                 ignition::math::Pose3d(
                   Conversions::ConvertIgn(cam->getDerivedPosition()),
-                  Conversions::ConvertIgn(cam->getDerivedOrientation())));
+                  Conversions::ConvertIgn(quat)));
+            this->dataPtr->wideAngleDummyCamera->OgreCamera()
+                ->getParentSceneNode()->_update(true, true);
 
+            // OcclusionScale() was built for a regular perspective projection
+            // camera and cannot be passed a WideAngleCamera. A cleaner solution
+            // that does not involve ogreEnvCameras would be to make a version
+            // of OcclusionScale that only requires a camera pose and light
+            // world position. This would require heavy refactoring.
             occlusionScale = this->OcclusionScale(
                 this->dataPtr->wideAngleDummyCamera,
                 ignition::math::Vector3d(pos.x, pos.y, pos.z),
@@ -313,7 +352,7 @@ namespace gazebo
       // work in normalized device coordinates
       // lens flare's halfSize is just an approximated value
       double halfSize = 0.05 * this->dataPtr->scale;
-      double steps = 10;
+      double steps = this->dataPtr->occlusionSteps;
       double stepSize = halfSize * 2 / steps;
       double cx = _imgPos.X();
       double cy = _imgPos.Y();
@@ -329,8 +368,11 @@ namespace gazebo
           screenPos.X() = ((j / 2.0) + 0.5) * viewportWidth;
           screenPos.Y() = (1 - ((i / 2.0) + 0.5)) * viewportHeight;
           intersect = scene->FirstContact(_cam, screenPos, position);
-          if (intersect && (position.Length() < _worldPos.Length()))
+          if (intersect &&
+              (position.SquaredLength() < _worldPos.SquaredLength()))
+          {
             occluded++;
+          }
           rays++;
         }
       }
@@ -356,14 +398,20 @@ namespace gazebo
       public: ignition::math::Vector3d lensFlareColor
           = ignition::math::Vector3d(1.0, 1.0, 1.0);
 
+      /// \brief Color of lens flare.
+      public: double lensFlareOcclusionSteps = 10.0;
+
       /// \brief Compositor name to be used for lens flare
       public: std::string compositorName = "CameraLensFlare/Default";
 
       /// \brief Pointer to camera
       public: CameraPtr camera;
 
-      /// \brief Name of directional light
+      /// \brief Name of preferred light
       public: std::string lightName;
+
+      /// \brief Name of light currently generating lens flare
+      public: std::string lightNameCurrentlyInUse;
 
       /// \brief Flag to indicate whether or not to remove lens flare effect.
       public: bool removeLensFlare = false;
@@ -423,6 +471,8 @@ void LensFlare::SetCamera(CameraPtr _camera)
         this->dataPtr->lensFlareScale);
     this->dataPtr->lensFlareCompositorListener->SetColor(
         this->dataPtr->lensFlareColor);
+    this->dataPtr->lensFlareCompositorListener->SetOcclusionSteps(
+        this->dataPtr->lensFlareOcclusionSteps);
 
     this->dataPtr->lensFlareInstance =
         Ogre::CompositorManager::getSingleton().addCompositor(
@@ -437,6 +487,12 @@ void LensFlare::SetCamera(CameraPtr _camera)
 
   this->dataPtr->preRenderConnection = event::Events::ConnectPreRender(
       std::bind(&LensFlare::Update, this));
+}
+
+//////////////////////////////////////////////////
+void LensFlare::SetLightName(std::string _name)
+{
+  this->dataPtr->lightName = _name;
 }
 
 //////////////////////////////////////////////////
@@ -464,6 +520,12 @@ void LensFlare::SetColor(const ignition::math::Vector3d &_color)
 }
 
 //////////////////////////////////////////////////
+void LensFlare::SetOcclusionSteps(double _occlusionSteps)
+{
+  this->dataPtr->lensFlareOcclusionSteps = _occlusionSteps;
+}
+
+//////////////////////////////////////////////////
 void LensFlare::SetCompositorName(const std::string &_name)
 {
   this->dataPtr->compositorName = _name;
@@ -480,29 +542,39 @@ void LensFlare::Update()
     this->dataPtr->requestSub.reset();
     this->dataPtr->lensFlareInstance->setEnabled(false);
     this->dataPtr->removeLensFlare = false;
-    this->dataPtr->lightName = "";
+    this->dataPtr->lightNameCurrentlyInUse = "";
     return;
   }
 
+  LightPtr light;
 
-  // Get the first directional light
-  LightPtr directionalLight;
-  for (unsigned int i = 0; i < this->dataPtr->camera->GetScene()->LightCount();
-      ++i)
+  // Use the specified light, if there is one
+  if (!this->dataPtr->lightName.empty())
   {
-    LightPtr light = this->dataPtr->camera->GetScene()->LightByIndex(i);
-    if (light->Type() == "directional")
+    light = this->dataPtr->camera->GetScene()->LightByName(
+        this->dataPtr->lightName);
+  }
+  else // Get the first directional light
+  {
+    for (unsigned int i = 0;
+         i < this->dataPtr->camera->GetScene()->LightCount(); ++i)
     {
-      directionalLight = light;
-      break;
+      LightPtr directionalLight =
+          this->dataPtr->camera->GetScene()->LightByIndex(i);
+      if (directionalLight->Type() == "directional")
+      {
+        light = directionalLight;
+        break;
+      }
     }
   }
-  if (!directionalLight)
+
+  if (!light)
     return;
 
-  this->dataPtr->lightName = directionalLight->Name();
+  this->dataPtr->lightNameCurrentlyInUse = light->Name();
 
-  this->dataPtr->lensFlareCompositorListener->SetLight(directionalLight);
+  this->dataPtr->lensFlareCompositorListener->SetLight(light);
   this->dataPtr->lensFlareInstance->setEnabled(true);
 
   // disconnect
@@ -524,7 +596,7 @@ void LensFlare::OnRequest(ConstRequestPtr &_msg)
 {
   std::lock_guard<std::mutex> lock(this->dataPtr->mutex);
   if (_msg->request() == "entity_delete" &&
-      _msg->data() == this->dataPtr->lightName)
+      _msg->data() == this->dataPtr->lightNameCurrentlyInUse)
   {
     this->dataPtr->removeLensFlare = true;
     this->dataPtr->preRenderConnection = event::Events::ConnectPreRender(

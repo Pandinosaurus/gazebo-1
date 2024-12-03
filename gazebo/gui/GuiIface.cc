@@ -43,12 +43,6 @@
 #include "gazebo/gui/GuiPlugin.hh"
 #include "gazebo/gui/RenderWidget.hh"
 
-#ifdef WIN32
-# define HOMEDIR "HOMEPATH"
-#else
-# define HOMEDIR "HOME"
-#endif  // WIN32
-
 // These are needed by QT. They need to stay valid during the entire
 // lifetime of the application, and argc > 0 and argv must contain one valid
 // character string
@@ -414,9 +408,11 @@ bool gui::run(int _argc, char **_argv)
 
   mainWindow->RenderWidget()->AddPlugins(g_plugins_to_load);
 
-#ifndef _WIN32
   // Now that we're about to run, install a signal handler to allow for
   // graceful shutdown on Ctrl-C.
+#ifdef _WIN32
+  signal(SIGINT, signal_handler);
+#else
   struct sigaction sigact;
   sigact.sa_flags = 0;
   sigact.sa_handler = signal_handler;

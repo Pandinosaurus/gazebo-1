@@ -17,6 +17,10 @@
 #ifndef GAZEBO_TRANSPORT_TOPICMANAGER_HH_
 #define GAZEBO_TRANSPORT_TOPICMANAGER_HH_
 
+// This fixes compiler warnings, see #3147 and #3160
+#ifndef BOOST_BIND_GLOBAL_PLACEHOLDERS
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+#endif
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <map>
@@ -239,6 +243,9 @@ namespace gazebo
       /// \brief Add a node to the list of nodes that requires processing.
       /// \param[in] _ptr Node to process.
       public: void AddNodeToProcess(NodePtr _ptr);
+
+      /// \brief Returns a pointer to the unique (static) instance
+      public: static TopicManager* Instance();
 
       /// \brief A map of string->list of Node pointers
       typedef std::map<std::string, std::list<NodePtr> > SubNodeMap;

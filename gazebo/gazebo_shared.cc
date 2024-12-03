@@ -14,6 +14,8 @@
  * limitations under the License.
  *
  */
+#include <cstdlib>
+
 #include <sdf/sdf.hh>
 
 #include "gazebo/transport/TransportIface.hh"
@@ -27,6 +29,32 @@
 void gazebo_shared::printVersion()
 {
   fprintf(stderr, "%s", GAZEBO_VERSION_HEADER);
+
+  const char *ignoreEol =
+    gazebo::common::getEnv("GAZEBO_SUPPRESS_EOL_WARNING");
+  if (ignoreEol != nullptr && strncmp(ignoreEol, "1", 1) == 0)
+    return;
+
+  const char* msg = R"(
+#     # ####### ####### ###  #####  #######
+##    # #     #    #     #  #     # #
+# #   # #     #    #     #  #       #
+#  #  # #     #    #     #  #       #####
+#   # # #     #    #     #  #       #
+#    ## #     #    #     #  #     # #
+#     # #######    #    ###  #####  #######
+
+This version of Gazebo, now called Gazebo classic, reaches end-of-life
+in January 2025. Users are highly encouraged to migrate to the new Gazebo
+using our migration guides (https://gazebosim.org/docs/latest/gazebo_classic_migration/)
+
+
+)";
+#ifndef _WIN32
+  fprintf(stderr, "\033[1;33m%s\033[0m", msg);
+#else
+  fprintf(stderr, "%s",msg);
+#endif
 }
 
 /////////////////////////////////////////////////
@@ -59,6 +87,7 @@ bool gazebo_shared::setup(const std::string &_prefix, int _argc, char **_argv,
   gazebo::common::load();
 
   // The SDF find file callback.
+  using namespace boost::placeholders;
   sdf::setFindCallback(boost::bind(&gazebo::common::find_file, _1));
 
   // Initialize the informational logger. This will log warnings, and

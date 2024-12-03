@@ -28,9 +28,11 @@ namespace gazebo
   /// \brief Plugin that adds lens flare effect to a camera or multicamera
   /// sensor
   /// The plugin has the following optional parameter:
-  /// <compositor>  Name of the lens flare compositor to use.
-  /// <scale>       Scale of lens flare. Must be greater than 0
-  /// <color>       Color of lens flare.
+  /// <color>           Color of lens flare.
+  /// <compositor>      Name of the lens flare compositor to use.
+  /// <light_name>      Name of the light source to use.
+  /// <occlusion_steps> Number of steps used when checking for occlusions.
+  /// <scale>           Scale of lens flare. Must be greater than 0.
   /// \todo A potentially useful feature would be an option for constantly
   /// updating the flare color to match the light source color.
   class GZ_PLUGIN_VISIBLE LensFlareSensorPlugin : public SensorPlugin
@@ -45,6 +47,10 @@ namespace gazebo
     public: virtual void Load(sensors::SensorPtr _sensor,
         sdf::ElementPtr _sdf);
 
+    /// \brief Set the light name.
+    /// \param[in] _name Scale of lens flare
+    public: void SetLightName(std::string _name);
+
     /// \brief Set the scale of lens flare.
     /// \param[in] _scale Scale of lens flare
     public: void SetScale(const double _scale);
@@ -52,6 +58,12 @@ namespace gazebo
     /// \brief Set the color of lens flare.
     /// \param[in] _color Color of lens flare
     public: void SetColor(const ignition::math::Vector3d &_color);
+
+    /// \brief Set the number of steps to take in each direction when
+    /// checking for occlusions.
+    /// \param[in] _occlusionSteps number of steps to take in each direction
+    /// when checking for occlusion.
+    public: void SetOcclusionSteps(double _occlusionSteps);
 
     /// \brief Add lens flare effect to a camera
     /// \param[in] _camera Camera to add the lens flare effect to.

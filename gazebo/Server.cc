@@ -198,6 +198,8 @@ bool Server::ParseArgs(int _argc, char **_argv)
      "Recording filter (supports wildcard and regular expression).")
     ("record_resources", "Recording with model meshes and materials.")
     ("seed",  po::value<double>(), "Start with a given random number seed.")
+    ("initial_sim_time", po::value<double>(),
+     "Initial simulation time (seconds). This time is also used after reset.")
     ("iters",  po::value<unsigned int>(), "Number of iterations to simulate.")
     ("minimal_comms", "Reduce the TCP/IP traffic output by gzserver")
     ("server-plugin,s", po::value<std::vector<std::string> >(),
@@ -403,6 +405,25 @@ bool Server::ParseArgs(int _argc, char **_argv)
         gzerr << "Specified profile [" << profileName << "] was not found."
               << std::endl;
       }
+    }
+  }
+
+  if (this->dataPtr->vm.count("initial_sim_time"))
+  {
+    try
+    {
+      common::Time initialSimTime {
+        this->dataPtr->vm["initial_sim_time"].as<double>()};
+      physics::get_world()->SetSimTime(initialSimTime);
+      physics::get_world()->SetInitialSimTime(initialSimTime);
+      gzmsg << "Setting initial sim time to [" <<
+        physics::get_world()->SimTime() << "]\n" << std::endl;
+    }
+    catch(...)
+    {
+      gzerr << "Unable to cast initial_sim_time[" <<
+        this->dataPtr->vm["initial_sim_time"].as<double>() << "] "
+        << "to double for setting initial sim time\n" << std::endl;
     }
   }
 
@@ -622,9 +643,11 @@ void Server::Fini()
 /////////////////////////////////////////////////
 void Server::Run()
 {
-#ifndef _WIN32
   // Now that we're about to run, install a signal handler to allow for
   // graceful shutdown on Ctrl-C.
+#ifdef _WIN32
+  signal(SIGINT, Server::SigInt);
+#else
   struct sigaction sigact;
   sigact.sa_flags = 0;
   sigact.sa_handler = Server::SigInt;

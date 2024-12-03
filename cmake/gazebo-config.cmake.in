@@ -35,7 +35,7 @@ set (GAZEBO_HAS_DART_BULLET @HAVE_DART_BULLET@)
 # Set whether Gazebo was built with Ignition Fuel Tools support
 set (GAZEBO_HAS_IGNITION_FUEL_TOOLS @HAVE_IGNITION_FUEL_TOOLS@)
 
-include (FindPkgConfig)
+find_package(PkgConfig)
 
 #################################################
 # @PKG_NAME@_PROTO_PATH, @PKG_NAME@_PROTO_INCLUDE_DIRS, and
@@ -134,10 +134,6 @@ if (GAZEBO_HAS_DART)
   list(APPEND @PKG_NAME@_LIBRARIES ${DART_LIBRARIES})
 endif()
 
-# Visual Studio enables c++11 support by default
-if (NOT MSVC)
-  list(APPEND @PKG_NAME@_CXX_FLAGS -std=c++11)
-endif()
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND
     "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
   set(@PKG_NAME@_CXX_FLAGS "${@PKG_NAME@_CXX_FLAGS} -stdlib=libc++")
@@ -170,12 +166,21 @@ list(APPEND @PKG_NAME@_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 list(APPEND @PKG_NAME@_LIBRARIES ${Boost_LIBRARIES})
 
 # Find protobuf
-find_package(Protobuf REQUIRED)
-list(APPEND @PKG_NAME@_INCLUDE_DIRS ${PROTOBUF_INCLUDE_DIRS})
-list(APPEND @PKG_NAME@_LIBRARIES ${PROTOBUF_LIBRARIES})
+set(GZ_PROTOBUF_USE_CMAKE_CONFIG @GZ_PROTOBUF_USE_CMAKE_CONFIG@)
+
+if(NOT GZ_PROTOBUF_USE_CMAKE_CONFIG)
+  find_package(Protobuf REQUIRED)
+  list(APPEND @PKG_NAME@_INCLUDE_DIRS ${PROTOBUF_INCLUDE_DIRS})
+  list(APPEND @PKG_NAME@_LIBRARIES ${PROTOBUF_LIBRARIES})
+else()
+  find_package(Protobuf CONFIG REQUIRED)
+  list(APPEND @PKG_NAME@_INCLUDE_DIRS ${PROTOBUF_INCLUDE_DIRS})
+  list(APPEND @PKG_NAME@_LIBRARIES protobuf::libprotoc)
+  list(APPEND @PKG_NAME@_LIBRARIES protobuf::libprotobuf)
+endif()
 
 # Find SDFormat
-find_package(sdformat9 REQUIRED)
+find_package(sdformat9 REQUIRED VERSION 9.8)
 list(APPEND @PKG_NAME@_INCLUDE_DIRS ${SDFormat_INCLUDE_DIRS})
 list(APPEND @PKG_NAME@_LIBRARIES ${SDFormat_LIBRARIES})
 
@@ -226,3 +231,11 @@ list(APPEND @PKG_NAME@_LIBRARIES ${IGNITION-FUEL_TOOLS_LIBRARIES})
 list(APPEND @PKG_NAME@_LDFLAGS -Wl,-rpath,${GAZEBO_INSTALL_LIB_DIR}/gazebo-@GAZEBO_MAJOR_VERSION@/plugins)
 list(APPEND @PKG_NAME@_LDFLAGS -L${GAZEBO_INSTALL_LIB_DIR})
 list(APPEND @PKG_NAME@_LDFLAGS -L${GAZEBO_INSTALL_LIB_DIR}/gazebo-@GAZEBO_MAJOR_VERSION@/plugins)
+
+set (GAZEBO_HAS_TBB_GREATER_OR_EQUAL_2021 @HAVE_TBB_GREATER_OR_EQUAL_2021@)
+if (GAZEBO_HAS_TBB_GREATER_OR_EQUAL_2021)
+  find_package(TBB CONFIG)
+  if (TARGET TBB::tbb)
+    list(APPEND @PKG_NAME@_LIBRARIES TBB::tbb)
+  endif ()
+endif ()

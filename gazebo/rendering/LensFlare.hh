@@ -47,8 +47,8 @@ namespace gazebo
       /// \brief Destructor
       public: ~LensFlareCompositorListener();
 
-      /// \brief Set directional light that generates lens flare
-      /// \param[in] _light Pointer to directional light
+      /// \brief Set light that generates lens flare
+      /// \param[in] _light Pointer to light
       public: void SetLight(LightPtr _light);
 
       /// \brief Set the scale of lens flare.
@@ -58,6 +58,12 @@ namespace gazebo
       /// \brief Set the color of lens flare.
       /// \param[in] _color Color of lens flare
       public: void SetColor(const ignition::math::Vector3d &_color);
+
+      /// \brief Set the number of steps to take in each direction when
+      /// checking for occlusions.
+      /// \param[in] _occlusionSteps number of steps to take in each direction
+      /// when checking for occlusion.
+      public: void SetOcclusionSteps(double _occlusionSteps);
 
       /// \brief Callback that OGRE will invoke for us on each render call
       /// \param[in] _passID OGRE material pass ID.
@@ -115,6 +121,10 @@ namespace gazebo
       /// \param[in] _camera Camera to be distorted
       public: void SetCamera(CameraPtr _camera);
 
+      /// \brief Set the name of light that generates lens flare.
+      /// \param[in] _name Light that generates lens flare
+      public: void SetLightName(std::string _name);
+
       /// \brief Set the scale of lens flare. Must be greater than 0.
       /// \param[in] _scale Scale of lens flare
       public: void SetScale(const double _scale);
@@ -122,6 +132,12 @@ namespace gazebo
       /// \brief Set the color of lens flare.
       /// \param[in] _color Color of lens flare
       public: void SetColor(const ignition::math::Vector3d &_color);
+
+      /// \brief Set the number of steps to take in each direction when
+      /// checking for occlusions.
+      /// \param[in] _occlusionSteps number of steps to take in each direction
+      /// when checking for occlusion.
+      public: void SetOcclusionSteps(double _occlusionSteps);
 
       /// \brief Set the name of the lens flare compositor to use the next
       /// time SetCamera is called.

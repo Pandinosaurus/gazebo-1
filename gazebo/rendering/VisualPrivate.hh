@@ -93,6 +93,7 @@ namespace gazebo
 
       /// \brief The SDF element for the visual.
       public: sdf::ElementPtr sdf;
+      public: sdf::ElementPtr poseElem;
 
       /// \brief The unique name for the visual's material.
       public: std::string myMaterialName;
@@ -185,6 +186,9 @@ namespace gazebo
       /// \brief Specular color of the visual.
       public: ignition::math::Color specular =
           ignition::math::Color(0, 0, 0, 0);
+
+      /// \brief Specular exponent of the visual.
+      public: double shininess = 0;
 
       /// \brief Emissive color of the visual.
       public: ignition::math::Color emissive =

@@ -22,8 +22,12 @@
 #include <vector>
 #include <map>
 
-#include <boost/function.hpp>
+// This fixes compiler warnings, see #3147 and #3160
+#ifndef BOOST_BIND_GLOBAL_PLACEHOLDERS
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+#endif
 #include <boost/bind.hpp>
+#include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 
@@ -45,7 +49,7 @@ namespace gazebo
     class MovingWindowFilterPrivate
     {
       // \brief Constructor
-      public: MovingWindowFilterPrivate<T>();
+      public: MovingWindowFilterPrivate();
 
       /// \brief For moving window smoothed value
       public: unsigned int valWindowSize;
@@ -81,7 +85,7 @@ namespace gazebo
     class MovingWindowFilter
     {
       /// \brief Constructor
-      public: MovingWindowFilter<T>();
+      public: MovingWindowFilter();
 
       /// \brief Destructor
       public: virtual ~MovingWindowFilter();
@@ -108,7 +112,7 @@ namespace gazebo
 
       /// \brief Allow subclasses to initialize their own data pointer.
       /// \param[in] _d Reference to data pointer.
-      protected: explicit MovingWindowFilter<T>(
+      protected: explicit MovingWindowFilter(
                             MovingWindowFilterPrivate<T> &_d);
 
       /// \brief Data pointer.

@@ -14,10 +14,14 @@
  * limitations under the License.
  *
 */
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <ignition/common/Profiler.hh>
+#include <ignition/math/Angle.hh>
 #include <ignition/math/Color.hh>
+#include <ignition/math/Matrix4.hh>
+#include <ignition/math/Pose3.hh>
 #include <ignition/math/Vector2.hh>
+#include <ignition/math/Vector3.hh>
 
 #include "gazebo/rendering/ogre_gazebo.h"
 

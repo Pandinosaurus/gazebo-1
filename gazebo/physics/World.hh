@@ -240,6 +240,10 @@ namespace gazebo
       /// \return The real time.
       public: common::Time RealTime() const;
 
+      /// \brief Set the initial sim time.
+      /// \param[in] _t The new simulation time
+      public: void SetInitialSimTime(const common::Time &_t);
+
       /// \brief Returns the state of the simulation true if paused.
       /// \return True if paused.
       public: bool IsPaused() const;
@@ -461,8 +465,14 @@ namespace gazebo
       public: std::string UniqueModelName(const std::string &_name);
 
       /// \brief Set callback 'waitForSensors'
-      /// \param[in] function to be called
+      /// \param[in] _func function to be called
       public: void SetSensorWaitFunc(std::function<void(double, double)> _func);
+
+      /// \brief Set Visual shininess value by scoped name
+      /// \param[in] _scopedName Scoped name of visual.
+      /// \param[in] _shininess Shininess value.
+      public: void SetVisualShininess(const std::string &_scopedName,
+          double _shininess);
 
       /// \cond
       /// This is an internal function.
@@ -528,9 +538,15 @@ namespace gazebo
       /// \brief Step callback.
       private: void OnStep();
 
-      /// \brief Called when a world control message is received.
+      /// \brief Called when a world control message is received on the
+      /// gazebo_transport topic using boost asio.
       /// \param[in] _data The world control message.
       private: void OnControl(ConstWorldControlPtr &_data);
+
+      /// \brief Called when a world control message is received on the
+      /// gz-transport topic using ZeroMQ.
+      /// \param[in] _data The world control message.
+      private: void OnWorldControl(const msgs::WorldControl &_data);
 
       /// \brief Called when log playback control message is received.
       /// \param[in] _data The log playback control message.
@@ -663,6 +679,12 @@ namespace gazebo
       private: bool ShadowCasterMaterialNameService(
           ignition::msgs::StringMsg &_response);
 
+      /// \brief Callback for "<this_name>/spherical_coordinates_surface_type" service.
+      /// \param[out] _response Message containing spherical coordinates surface type.
+      /// \return True if the info was successfully obtained.
+      public: bool SphericalCoordinatesSurfaceService(
+          ignition::msgs::StringMsg &_response);
+
       /// \brief Callback for "<this_name>/shadow_caster_render_back_faces"
       ///     service.
       /// \param[out] _response Message containing shadow caster render back
@@ -670,6 +692,20 @@ namespace gazebo
       /// \return True if the info was successfully obtained.
       private: bool ShadowCasterRenderBackFacesService(
           ignition::msgs::Boolean &_response);
+
+      /// \brief Callback for "<model_name>/shininess" service.
+      /// \param[in] _request Message containing the model name.
+      /// \param[out] _response Message containing shininess value.
+      /// \return True if the info was successfully obtained.
+      private: bool MaterialShininessService(
+          const ignition::msgs::StringMsg &_request, msgs::Any &_response);
+
+      /// \brief Helper function for getting shininess values by scoped
+      /// visual name.
+      /// \param[in] _scopedName Scoped visual name.
+      /// \return Shininess value.
+      private: double ShininessByScopedName(const std::string &_scopedName)
+          const;
 
       /// \internal
       /// \brief Private data pointer.

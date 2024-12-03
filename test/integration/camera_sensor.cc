@@ -1412,6 +1412,273 @@ TEST_F(CameraSensor, LensFlare)
 }
 
 /////////////////////////////////////////////////
+TEST_F(CameraSensor, LensFlareWideAngleCamera)
+{
+  Load("worlds/lensflare_wideangle_cam.world");
+
+  // Make sure the render engine is available.
+  if (rendering::RenderEngine::Instance()->GetRenderPathType() ==
+      rendering::RenderEngine::NONE)
+  {
+    gzerr << "No rendering engine, unable to run camera test\n";
+    return;
+  }
+
+  // Get the lens flare wide angle camera model.
+  std::string modelNameLensFlare = "wide_angle_cameras_near_heightmap";
+  std::string cameraNameLensFlare = "camera_sensor_lensflare";
+
+  physics::WorldPtr world = physics::get_world();
+  ASSERT_TRUE(world != nullptr);
+  physics::ModelPtr model = world->ModelByName(modelNameLensFlare);
+  ASSERT_TRUE(model != nullptr);
+
+  // use fully scoped sensor name
+  sensors::SensorPtr sensorLensFlare =
+    sensors::get_sensor(world->Name() + "::"
+                 + modelNameLensFlare + "::link::"
+                 + cameraNameLensFlare);
+  sensors::CameraSensorPtr camSensorLensFlare =
+    std::dynamic_pointer_cast<sensors::CameraSensor>(sensorLensFlare);
+  ASSERT_TRUE(camSensorLensFlare != nullptr);
+
+  // Get the wide angle camera without the lens flare.
+  std::string modelNameWithoutLensFlare = "wide_angle_cameras_near_heightmap";
+  std::string cameraNameWithoutLensFlare = "camera_sensor_without_lensflare";
+
+  model = world->ModelByName(modelNameWithoutLensFlare);
+  ASSERT_TRUE(model != nullptr);
+
+  // use fully scoped sensor name
+  sensors::SensorPtr sensorWithoutLensFlare =
+    sensors::get_sensor(world->Name() + "::"
+          + modelNameWithoutLensFlare + "::link::"
+          + cameraNameWithoutLensFlare);
+  sensors::CameraSensorPtr camSensorWithoutLensFlare =
+    std::dynamic_pointer_cast<sensors::CameraSensor>(sensorWithoutLensFlare);
+  ASSERT_TRUE(camSensorWithoutLensFlare != nullptr);
+
+  unsigned int width = 320;
+  unsigned int height = 240;
+
+  // Collect images from the 2 cameras.
+  imageCount = 0;
+  imageCount2 = 0;
+  img = new unsigned char[width * height * 3];
+  img2 = new unsigned char[width * height * 3];
+  event::ConnectionPtr c =
+    camSensorLensFlare->Camera()->ConnectNewImageFrame(
+        std::bind(&::OnNewCameraFrame, &imageCount, img,
+          std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+          std::placeholders::_4, std::placeholders::_5));
+  event::ConnectionPtr c2 =
+    camSensorWithoutLensFlare->Camera()->ConnectNewImageFrame(
+        std::bind(&::OnNewCameraFrame, &imageCount2, img2,
+          std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+          std::placeholders::_4, std::placeholders::_5));
+
+  // Get some images.
+  int sleep = 0;
+  while ((imageCount < 10 || imageCount2 < 10)
+      && sleep++ < 1000)
+  {
+    common::Time::MSleep(10);
+  }
+
+  EXPECT_GE(imageCount, 10);
+  EXPECT_GE(imageCount2, 10);
+
+  c.reset();
+  c2.reset();
+
+  // Compare colors.
+  unsigned int colorSum = 0;
+  unsigned int colorSum2 = 0;
+  for (unsigned int y = 0; y < height; ++y)
+  {
+    for (unsigned int x = 0; x < width*3; x+=3)
+    {
+      unsigned int r = img[(y*width*3) + x];
+      unsigned int g = img[(y*width*3) + x + 1];
+      unsigned int b = img[(y*width*3) + x + 2];
+      colorSum += r + g + b;
+      unsigned int r2 = img2[(y*width*3) + x];
+      unsigned int g2 = img2[(y*width*3) + x + 1];
+      unsigned int b2 = img2[(y*width*3) + x + 2];
+      colorSum2 += r2 + g2 + b2;
+    }
+  }
+
+  // Camera with lens flare should be brighter than camera without it.
+  EXPECT_GT(colorSum, colorSum2) <<
+      "colorSum: " << colorSum << ", " <<
+      "colorSum2: " << colorSum2;
+
+  delete[] img;
+  delete[] img2;
+}
+
+/////////////////////////////////////////////////
+TEST_F(CameraSensor, LensFlareWideAngleCameraOcclusion)
+{
+  LoadArgs(" --lockstep -u worlds/lensflare_wideangle_cam.world");
+
+  // Make sure the render engine is available.
+  if (rendering::RenderEngine::Instance()->GetRenderPathType() ==
+      rendering::RenderEngine::NONE)
+  {
+    gzerr << "No rendering engine, unable to run camera test\n";
+    return;
+  }
+
+  // Get the model containing the wide angle cameras.
+  const std::string modelName = "slow_wide_angle_cameras";
+  const std::string cameraNameLensFlare = "camera_sensor_lensflare";
+
+  physics::WorldPtr world = physics::get_world();
+  ASSERT_TRUE(world != nullptr);
+  physics::ModelPtr model = world->ModelByName(modelName);
+  ASSERT_TRUE(model != nullptr);
+
+  // use fully scoped sensor name
+  sensors::SensorPtr sensorLensFlare =
+    sensors::get_sensor(world->Name() + "::"
+                          + modelName + "::link::" + cameraNameLensFlare);
+  sensors::CameraSensorPtr camSensorLensFlare =
+    std::dynamic_pointer_cast<sensors::CameraSensor>(sensorLensFlare);
+  ASSERT_TRUE(camSensorLensFlare != nullptr);
+
+  // Get the wide angle camera without the lens flare.
+  std::string cameraNameWithoutLensFlare = "camera_sensor_without_lensflare";
+
+  // use fully scoped sensor name
+  sensors::SensorPtr sensorWithoutLensFlare =
+    sensors::get_sensor(world->Name() + "::"
+                          + modelName + "::link::" + cameraNameWithoutLensFlare);
+  sensors::CameraSensorPtr camSensorWithoutLensFlare =
+    std::dynamic_pointer_cast<sensors::CameraSensor>(sensorWithoutLensFlare);
+  ASSERT_TRUE(camSensorWithoutLensFlare != nullptr);
+
+  const unsigned int width = 320;
+  const unsigned int height = 240;
+
+  // Collect images from the 2 cameras.
+  imageCount = 0;
+  imageCount2 = 0;
+  img = new unsigned char[width * height * 3];
+  img2 = new unsigned char[width * height * 3];
+  event::ConnectionPtr c =
+    camSensorLensFlare->Camera()->ConnectNewImageFrame(
+        std::bind(&::OnNewCameraFrame, &imageCount, img,
+          std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+          std::placeholders::_4, std::placeholders::_5));
+  event::ConnectionPtr c2 =
+    camSensorWithoutLensFlare->Camera()->ConnectNewImageFrame(
+        std::bind(&::OnNewCameraFrame, &imageCount2, img2,
+          std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+          std::placeholders::_4, std::placeholders::_5));
+
+  // Step just enough to trigger new images, then wait for images to arrive.
+  for (int i = 0; i < 3; ++i)
+  {
+    // Sensor update period of 1 second
+    // Step 1.005 seconds to ensure images are triggered
+    world->Step(1005);
+
+    int sleep = 0;
+    while ((imageCount < i+1 || imageCount2 < i+1)
+        && sleep++ < 1000)
+    {
+      common::Time::MSleep(10);
+    }
+    gzdbg << "Sim time " << world->SimTime().Double()
+          << ", slept for " << sleep * 0.01 << " seconds"
+          << std::endl;
+
+    EXPECT_EQ(imageCount, i + 1);
+    EXPECT_EQ(imageCount2, i + 1);
+  }
+
+  EXPECT_EQ(imageCount, 3);
+  EXPECT_EQ(imageCount2, 3);
+
+  // Lock image mutex to allow safe comparison of images
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    // The lens flare should be occluded at the initial position, so expect
+    // the images with and without lens flare to be identical.
+    for (unsigned int y = 0; y < height; ++y)
+    {
+      for (unsigned int x = 0; x < width*3; x+=3)
+      {
+        EXPECT_NEAR(img[(y*width*3) + x], img2[(y*width*3) + x], 2);
+        EXPECT_NEAR(img[(y*width*3) + x + 1], img2[(y*width*3) + x + 1], 2);
+        EXPECT_NEAR(img[(y*width*3) + x + 2], img2[(y*width*3) + x + 2], 2);
+      }
+    }
+  }
+
+  // Move the model up 10 meters so that it is no longer occluded.
+  auto modelPose = model->WorldPose();
+  modelPose.SetZ(modelPose.Pos().Z() + 10);
+  model->SetWorldPose(modelPose);
+
+  // Step an additional 1.005 seconds.
+  // This should generate another pair of images.
+  world->Step(1005);
+  {
+    int sleep = 0;
+    while ((imageCount < 4 || imageCount2 < 4)
+        && sleep++ < 1000)
+    {
+      common::Time::MSleep(10);
+    }
+    gzdbg << "Sim time " << world->SimTime().Double()
+          << ", slept for " << sleep * 0.01 << " seconds"
+          << std::endl;
+  }
+  EXPECT_EQ(imageCount, 4);
+  EXPECT_EQ(imageCount2, 4);
+
+  c.reset();
+  c2.reset();
+
+  unsigned int colorSum = 0;
+  unsigned int colorSum2 = 0;
+  // Lock image mutex to allow safe comparison of images
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    EXPECT_EQ(imageCount, 4);
+    EXPECT_EQ(imageCount2, 4);
+
+    for (unsigned int y = 0; y < height; ++y)
+    {
+      for (unsigned int x = 0; x < width*3; x+=3)
+      {
+        unsigned int r = img[(y*width*3) + x];
+        unsigned int g = img[(y*width*3) + x + 1];
+        unsigned int b = img[(y*width*3) + x + 2];
+        colorSum += r + g + b;
+        unsigned int r2 = img2[(y*width*3) + x];
+        unsigned int g2 = img2[(y*width*3) + x + 1];
+        unsigned int b2 = img2[(y*width*3) + x + 2];
+        colorSum2 += r2 + g2 + b2;
+      }
+    }
+  }
+
+  // Camera with lens flare should be brighter than camera without it.
+  EXPECT_GT(colorSum, 0u) << "colorSum: " << colorSum;
+  EXPECT_GT(colorSum2, 0u) << "colorSum2: " << colorSum2;
+  EXPECT_GT(colorSum, colorSum2 + 10000000) <<
+      "colorSum: " << colorSum << ", " <<
+      "colorSum2: " << colorSum2;
+
+  delete[] img;
+  delete[] img2;
+}
+
+/////////////////////////////////////////////////
 TEST_F(CameraSensor, 16bit)
 {
   // World contains a box positioned at top right quadrant of image generated
@@ -2268,3 +2535,163 @@ TEST_F(CameraSensor, CheckNewAndLegacyDistortionModes)
   delete[] img3;
   delete[] img4;
 }
+
+/////////////////////////////////////////////////
+// Test fails on macOS CI
+#ifndef __APPLE__
+TEST_F(CameraSensor, CheckIntrinsics)
+{
+  Load("worlds/camera_intrinsics_test.world");
+  physics::WorldPtr world = physics::get_world("default");
+  ASSERT_TRUE(world != NULL);
+
+  // Make sure the render engine is available.
+  if (rendering::RenderEngine::Instance()->GetRenderPathType() ==
+      rendering::RenderEngine::NONE)
+  {
+    gzerr << "No rendering engine, unable to run camera test\n";
+    return;
+  }
+
+  // Get the 'camera_without_intrinsics' sensor, no <intrinsics> tag is used for this sensor,
+  // and we expect the intrinsics to be equal to the default intrinsic values provided by gazebo.
+  sensors::SensorPtr camWithoutIntrinsicsSensorPtr =
+      sensors::get_sensor("camera_without_intrinsics_sensor");
+  sensors::CameraSensorPtr camWithoutIntrinsicsCameraSensorPtr =
+      std::dynamic_pointer_cast<sensors::CameraSensor>(camWithoutIntrinsicsSensorPtr);
+  EXPECT_TRUE(camWithoutIntrinsicsCameraSensorPtr != nullptr);
+  rendering::CameraPtr camWithoutIntrinsicsCameraPtr =
+      camWithoutIntrinsicsCameraSensorPtr->Camera();
+  EXPECT_TRUE(camWithoutIntrinsicsCameraPtr != nullptr);
+
+  // Image size, focal length and optical centre for 'camera_without_intrinsics' sensor
+  unsigned int camWithoutIntrinsicsWidth = camWithoutIntrinsicsCameraPtr->ImageWidth();
+  unsigned int camWithoutIntrinsicsHeight = camWithoutIntrinsicsCameraPtr->ImageHeight();
+  double camWithoutIntrinsicsFx = camWithoutIntrinsicsCameraPtr->ImageFocalLengthX();
+  double camWithoutIntrinsicsFy = camWithoutIntrinsicsCameraPtr->ImageFocalLengthY();
+  double camWithoutIntrinsicsCx = camWithoutIntrinsicsCameraPtr->ImageOpticalCenterX();
+  double camWithoutIntrinsicsCy = camWithoutIntrinsicsCameraPtr->ImageOpticalCenterY();
+
+  EXPECT_EQ(camWithoutIntrinsicsWidth, 320u);
+  EXPECT_EQ(camWithoutIntrinsicsHeight, 240u);
+  double error = 0.0005;
+  EXPECT_NEAR(camWithoutIntrinsicsFx, 277.127, error);
+  EXPECT_NEAR(camWithoutIntrinsicsFy, 277.127, error);
+  EXPECT_DOUBLE_EQ(camWithoutIntrinsicsCx, 160);
+  EXPECT_DOUBLE_EQ(camWithoutIntrinsicsCy, 120);
+
+  // Get the 'camera_default_intrinsics' sensor, <intrinsics> tag is used explicitly for this
+  // sensor where the intrinsics provided are same as gazebo default.
+  sensors::SensorPtr camDefaultIntrinsicsSensorPtr =
+      sensors::get_sensor("camera_default_intrinsics_sensor");
+  sensors::CameraSensorPtr camDefaultIntrinsicsCameraSensorPtr =
+      std::dynamic_pointer_cast<sensors::CameraSensor>(camDefaultIntrinsicsSensorPtr);
+  EXPECT_TRUE(camDefaultIntrinsicsCameraSensorPtr != nullptr);
+  rendering::CameraPtr camDefaultIntrinsicsCameraPtr =
+      camDefaultIntrinsicsCameraSensorPtr->Camera();
+  EXPECT_TRUE(camDefaultIntrinsicsCameraPtr != nullptr);
+
+  // Image size, focal length and optical centre for 'camera_default_intrinsics' sensor
+  unsigned int  camDefaultIntrinsicsWidth = camDefaultIntrinsicsCameraPtr->ImageWidth();
+  unsigned int  camDefaultIntrinsicsHeight = camDefaultIntrinsicsCameraPtr->ImageHeight();
+  double camDefaultIntrinsicsFx = camDefaultIntrinsicsCameraPtr->ImageFocalLengthX();
+  double camDefaultIntrinsicsFy = camDefaultIntrinsicsCameraPtr->ImageFocalLengthY();
+  double camDefaultIntrinsicsCx = camDefaultIntrinsicsCameraPtr->ImageOpticalCenterX();
+  double camDefaultIntrinsicsCy = camDefaultIntrinsicsCameraPtr->ImageOpticalCenterY();
+  EXPECT_EQ(camDefaultIntrinsicsWidth, 320u);
+  EXPECT_EQ(camDefaultIntrinsicsHeight, 240u);
+  EXPECT_DOUBLE_EQ(camDefaultIntrinsicsFx, 277);
+  EXPECT_DOUBLE_EQ(camDefaultIntrinsicsFy, 277);
+  EXPECT_DOUBLE_EQ(camDefaultIntrinsicsCx, 160);
+  EXPECT_DOUBLE_EQ(camDefaultIntrinsicsCy, 120);
+
+  // Get the 'camera_custom_intrinsics' sensor, <intrinsics> tag is used explicitly for this
+  // sensor where the intrinsics provided are different from the gazebo default.
+  sensors::SensorPtr camCustomIntrinsicsSensorPtr =
+      sensors::get_sensor("camera_custom_intrinsics_sensor");
+  sensors::CameraSensorPtr camCustomIntrinsicsCameraSensorPtr =
+      std::dynamic_pointer_cast<sensors::CameraSensor>(camCustomIntrinsicsSensorPtr);
+  EXPECT_TRUE(camCustomIntrinsicsCameraSensorPtr != nullptr);
+  rendering::CameraPtr camCustomIntrinsicsCameraPtr =
+      camCustomIntrinsicsCameraSensorPtr->Camera();
+  EXPECT_TRUE(camCustomIntrinsicsCameraPtr != nullptr);
+
+  // Image size, focal length and optical centre for 'camera_custom_intrinsics' sensor
+  unsigned int camCustomIntrinsicsWidth = camCustomIntrinsicsCameraPtr->ImageWidth();
+  unsigned int camCustomIntrinsicsHeight = camCustomIntrinsicsCameraPtr->ImageHeight();
+  double camCustomIntrinsicsFx = camCustomIntrinsicsCameraPtr->ImageFocalLengthX();
+  double camCustomIntrinsicsFy = camCustomIntrinsicsCameraPtr->ImageFocalLengthY();
+  double camCustomIntrinsicsCx = camCustomIntrinsicsCameraPtr->ImageOpticalCenterX();
+  double camCustomIntrinsicsCy = camCustomIntrinsicsCameraPtr->ImageOpticalCenterY();
+  EXPECT_EQ(camCustomIntrinsicsWidth, 320u);
+  EXPECT_EQ(camCustomIntrinsicsHeight, 240u);
+  EXPECT_DOUBLE_EQ(camCustomIntrinsicsFx, 320);
+  EXPECT_DOUBLE_EQ(camCustomIntrinsicsFy, 320);
+  EXPECT_DOUBLE_EQ(camCustomIntrinsicsCx, 160);
+  EXPECT_DOUBLE_EQ(camCustomIntrinsicsCy, 120);
+
+  // Connect to new frame event
+  imageCount = 0;
+  imageCount2 = 0;
+  imageCount3 = 0;
+  // Image size is same for all three cameras
+  img = new unsigned char[camCustomIntrinsicsWidth * camCustomIntrinsicsHeight * 3 * 2];
+  img2 = new unsigned char[camCustomIntrinsicsWidth * camCustomIntrinsicsHeight * 3 * 2];
+  img3 = new unsigned char[camCustomIntrinsicsWidth * camCustomIntrinsicsHeight * 3 * 2];
+
+  event::ConnectionPtr c =
+      camWithoutIntrinsicsCameraSensorPtr->Camera()->ConnectNewImageFrame(
+          std::bind(&::OnNewCameraFrame, &imageCount, img,
+                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+                    std::placeholders::_4, std::placeholders::_5));
+
+  event::ConnectionPtr c2 =
+      camDefaultIntrinsicsCameraSensorPtr->Camera()->ConnectNewImageFrame(
+          std::bind(&::OnNewCameraFrame, &imageCount2, img2,
+                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+                    std::placeholders::_4, std::placeholders::_5));
+
+  event::ConnectionPtr c3 =
+      camCustomIntrinsicsCameraSensorPtr->Camera()->ConnectNewImageFrame(
+          std::bind(&::OnNewCameraFrame, &imageCount3, img3,
+                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3,
+                    std::placeholders::_4, std::placeholders::_5));
+
+  // Wait for a few images
+  int sleep = 0;
+  int maxSleep = 500;
+  int totalImages = 10;
+  while ((imageCount < totalImages || imageCount2 < totalImages
+      || imageCount3 < totalImages) && sleep++ < maxSleep)
+    common::Time::MSleep(10);
+
+  EXPECT_GE(imageCount, totalImages);
+  EXPECT_GE(imageCount2, totalImages);
+  EXPECT_GE(imageCount3, totalImages);
+
+  c.reset();
+  c2.reset();
+  c3.reset();
+
+  unsigned int diffMax = 0, diffSum = 0;
+  double diffAvg = 0.0;
+
+  // We expect that there will be zero difference between the images img and img2 since
+  // they use the same default intrinsics.
+  this->ImageCompare(img, img2, camCustomIntrinsicsWidth,
+                     camCustomIntrinsicsHeight, 3, diffMax, diffSum,
+                     diffAvg);
+  EXPECT_EQ(diffSum, 0u);
+
+  // We expect that there will be non-zero difference between the images img2 and img3
+  // since they use different intrinsics
+  this->ImageCompare(img2, img3, camCustomIntrinsicsWidth,
+                     camCustomIntrinsicsHeight, 3, diffMax, diffSum,
+                     diffAvg);
+  EXPECT_NE(diffSum, 0u);
+
+  delete[] img;
+  delete[] img2;
+  delete[] img3;
+}
+#endif
